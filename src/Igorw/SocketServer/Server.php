@@ -70,6 +70,10 @@ class Server extends EventEmitter
             }
         };
     }
+    
+    public function attachInput($name, $stream) {
+        
+    }
 
     private function handleConnection($socket)
     {

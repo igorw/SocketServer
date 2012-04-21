@@ -189,15 +189,18 @@ class ServerTest extends \PHPUnit_Framework_TestCase
     }
     
     public function testMultipleInputs() {
-        $input1 = fopen('php://temp', 'r+');
-        $input2 = fopen('php://temp', 'r+');
+        $inputs = array();
+        for($i = 0; $i < 3; $i++) {
+            $inputs[] = fopen('php://temp', 'r+');
+        }
         
-        $this->server = new Server('localhost', 0, array('temp1' => $input1, 'temp2' => $input2), 0);
-        $this->server->on('input.temp1', $this->expectCallableOnce());
-        $this->server->on('input.temp2', $this->expectCallableOnce());
+        $this->server = new Server('localhost', 0, array('temp0' => $inputs[0], 'temp3' => $inputs[1]), 0);
+        $this->server->attachInput('temp2', $inputs[2]);
         
-        fwrite($input1, "foo\n");
-        fwrite($input2, "bar\n");
+        for($i = 0; $i < 3; $i++) {
+            $this->server->on('input.temp'.$i, $this->expectCallableOnce());
+            fwrite($inputs[$i], "asdf\n");
+        }
         
         $this->server->tick();
     }
