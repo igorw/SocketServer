@@ -204,6 +204,22 @@ class ServerTest extends \PHPUnit_Framework_TestCase
         
         $this->server->tick();
     }
+    
+    public function testRegisterSameInputTwice() {
+        echo "twice\n";
+        $input = fopen('php://temp', 'r+');
+        
+        $this->server = new Server('localhost', 0);
+        $this->server->attachInput('temp1', $input);
+        $this->server->attachInput('temp2', $input);
+        
+        $this->server->on('input.temp1', $this->expectCallableOnce());
+        $this->server->on('input.temp2', $this->expectCallableOnce());
+        
+        fwrite($input, "asdf\n");
+        
+        $this->server->tick();
+    }
 
     /**
      * @covers Igorw\SocketServer\Server::shutdown
