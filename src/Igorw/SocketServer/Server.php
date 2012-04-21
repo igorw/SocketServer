@@ -13,7 +13,7 @@ class Server extends EventEmitter
     private $clients = array();
 
     // timeout = microseconds
-    public function __construct($host, $port, $input = null, $timeout = 1000000)
+    public function __construct($host, $port, $input = array(), $timeout = 1000000)
     {
         $this->master = stream_socket_server("tcp://$host:$port", $errno, $errstr);
         if (false === $this->master) {
@@ -23,15 +23,11 @@ class Server extends EventEmitter
         $this->sockets[] = $this->master;
 
         $this->input = $input;
-        if (null !== $this->input) {
-            if(is_array($this->input)) {
-               foreach($this->input as $name=>$stream) {
-                   $this->sockets[] = $stream;
-               }
-            }
-            else {
-                $this->sockets[] = $this->input;
-            }
+        if(!is_array($this->input)) {
+            $this->input = array($input);
+        }
+        foreach($this->input as $name=>$stream) {
+                $this->sockets[] = $stream;
         }
 
         $this->timeout = $timeout;
@@ -72,7 +68,8 @@ class Server extends EventEmitter
     }
     
     public function attachInput($name, $stream) {
-        
+        $this->input[$name] = $stream;
+        $this->sockets[] = $stream;
     }
 
     private function handleConnection($socket)
@@ -87,7 +84,7 @@ class Server extends EventEmitter
 
     private function handleInput($input)
     {
-        if(!is_array($this->input)) {
+        if(isset($this->input[0]) && $input === $this->input[0]) {
             $name = 'input';
         }
         else {

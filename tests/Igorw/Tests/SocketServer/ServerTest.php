@@ -194,7 +194,7 @@ class ServerTest extends \PHPUnit_Framework_TestCase
             $inputs[] = fopen('php://temp', 'r+');
         }
         
-        $this->server = new Server('localhost', 0, array('temp0' => $inputs[0], 'temp3' => $inputs[1]), 0);
+        $this->server = new Server('localhost', 0, array('temp0' => $inputs[0], 'temp1' => $inputs[1]), 0);
         $this->server->attachInput('temp2', $inputs[2]);
         
         for($i = 0; $i < 3; $i++) {
