@@ -107,8 +107,8 @@ class Server extends EventEmitter
     
     private function isInputStream($socket)
     {
-        if($this->input !== null) {
-            if($socket === $this->input) {
+        if(null !== $this->input) {
+            if($this->input === $socket) {
                 return true;
             }
             if(is_array($this->input) && in_array($socket, $this->input)) {
