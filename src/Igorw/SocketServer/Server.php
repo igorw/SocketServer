@@ -24,7 +24,14 @@ class Server extends EventEmitter
 
         $this->input = $input;
         if (null !== $this->input) {
-            $this->sockets[] = $this->input;
+            if(is_array($this->input)) {
+               foreach($this->input as $name=>$stream) {
+                   $this->sockets[] = $stream;
+               }
+            }
+            else {
+                $this->sockets[] = $this->input;
+            }
         }
 
         $this->timeout = $timeout;
@@ -51,7 +58,7 @@ class Server extends EventEmitter
                     continue;
                 }
                 $this->handleConnection($newSocket);
-            } elseif (null !== $this->input && $this->input === $socket) {
+            } elseif ($this->isInputStream($socket)) {
                 $this->handleInput($socket);
             } else {
                 $data = @stream_socket_recvfrom($socket, 4096);
@@ -76,7 +83,14 @@ class Server extends EventEmitter
 
     private function handleInput($input)
     {
-        $this->emit('input', array($input));
+        if(!is_array($this->input)) {
+            $name = 'input';
+        }
+        else {
+            $streamName = \array_keys($this->input, $input);
+            $name = 'input.'.$streamName[0];
+        }
+        $this->emit($name, array($input));
     }
 
     private function handleDisconnect($socket)
@@ -89,6 +103,18 @@ class Server extends EventEmitter
         $client = $this->getClient($socket);
 
         $client->emit('data', array($data));
+    }
+    
+    private function isInputStream($socket)
+    {
+        if($this->input !== null) {
+            if($socket === $this->input) {
+                return true;
+            }
+            if(is_array($this->input) && in_array($socket, $this->input)) {
+                return true;
+            }
+        }
     }
 
     public function getClient($socket)
