@@ -13,18 +13,21 @@ class Server extends EventEmitter
     private $clients = array();
 
     // timeout = microseconds
-    public function __construct($host, $port, $input = null, $timeout = 1000000)
+    public function __construct($host, $port, $input = array(), $timeout = 1000000)
     {
         $this->master = stream_socket_server("tcp://$host:$port", $errno, $errstr);
         if (false === $this->master) {
             throw new ConnectionException($errstr, $errno);
         }
 
-        $this->sockets[] = $this->master;
+        $this->addSocket($this->master);
 
         $this->input = $input;
-        if (null !== $this->input) {
-            $this->sockets[] = $this->input;
+        if(!is_array($this->input)) {
+            $this->input = array($input);
+        }
+        foreach($this->input as $stream) {
+                $this->addSocket($stream);
         }
 
         $this->timeout = $timeout;
@@ -51,7 +54,7 @@ class Server extends EventEmitter
                     continue;
                 }
                 $this->handleConnection($newSocket);
-            } elseif (null !== $this->input && $this->input === $socket) {
+            } elseif ($this->isInputStream($socket)) {
                 $this->handleInput($socket);
             } else {
                 $data = @stream_socket_recvfrom($socket, 4096);
@@ -62,6 +65,11 @@ class Server extends EventEmitter
                 }
             }
         };
+    }
+    
+    public function attachInput($name, $stream) {
+        $this->input[$name] = $stream;
+        $this->addSocket($stream);
     }
 
     private function handleConnection($socket)
@@ -76,7 +84,14 @@ class Server extends EventEmitter
 
     private function handleInput($input)
     {
-        $this->emit('input', array($input));
+        $streamNames = \array_keys($this->input, $input);
+        foreach($streamNames as $name) {
+            if(0 === $name) {
+                $this->emit('input', array($input));
+            } else {
+                $this->emit('input.'.$name, array($input));
+            }
+        }        
     }
 
     private function handleDisconnect($socket)
@@ -89,6 +104,16 @@ class Server extends EventEmitter
         $client = $this->getClient($socket);
 
         $client->emit('data', array($data));
+    }
+    
+    private function isInputStream($socket)
+    {
+        return in_array($socket, $this->input);
+    }
+    
+    private function addSocket($socket) {
+        $this->sockets[] = $socket;
+        $this->sockets = array_unique($this->sockets);
     }
 
     public function getClient($socket)

@@ -187,6 +187,38 @@ class ServerTest extends \PHPUnit_Framework_TestCase
         $this->assertInstanceOf('Igorw\SocketServer\Connection', $conn);
         $this->assertSame($conn, $this->server->getClient($key));
     }
+    
+    public function testMultipleInputs() {
+        $inputs = array();
+        for($i = 0; $i < 3; $i++) {
+            $inputs[] = fopen('php://temp', 'r+');
+        }
+        
+        $this->server = new Server('localhost', 0, array('temp0' => $inputs[0], 'temp1' => $inputs[1]), 0);
+        $this->server->attachInput('temp2', $inputs[2]);
+        
+        for($i = 0; $i < 3; $i++) {
+            $this->server->on('input.temp'.$i, $this->expectCallableOnce());
+            fwrite($inputs[$i], "asdf\n");
+        }
+        
+        $this->server->tick();
+    }
+    
+    public function testAttachSameInputTwice() {
+        $input = fopen('php://temp', 'r+');
+        
+        $this->server = new Server('localhost', 0);
+        $this->server->attachInput('temp1', $input);
+        $this->server->attachInput('temp2', $input);
+        
+        $this->server->on('input.temp1', $this->expectCallableOnce());
+        $this->server->on('input.temp2', $this->expectCallableOnce());
+        
+        fwrite($input, "asdf\n");
+        
+        $this->server->tick();
+    }
 
     /**
      * @covers Igorw\SocketServer\Server::shutdown
