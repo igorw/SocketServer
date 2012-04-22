@@ -205,7 +205,7 @@ class ServerTest extends \PHPUnit_Framework_TestCase
         $this->server->tick();
     }
     
-    public function testRegisterSameInputTwice() {
+    public function testAttachSameInputTwice() {
         $input = fopen('php://temp', 'r+');
         
         $this->server = new Server('localhost', 0);
