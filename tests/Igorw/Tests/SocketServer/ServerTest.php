@@ -206,7 +206,6 @@ class ServerTest extends \PHPUnit_Framework_TestCase
     }
     
     public function testRegisterSameInputTwice() {
-        echo "twice\n";
         $input = fopen('php://temp', 'r+');
         
         $this->server = new Server('localhost', 0);
