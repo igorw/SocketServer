@@ -40,6 +40,23 @@ In order to communicate with the server, you can pass an input stream in
 the constructor and bind to the `input` event. This allows you to trigger
 custom events and run custom code when they happen.
 
+To attach multiple input streams you can either pass a named array of streams to the constructor 
+or attach a stream with `attachInput($name, $stream)`.
+If the input stream is readable a event with the name `input.<name>` will be triggered.
+
+For example:
+```php
+<?php
+use Igorw\SocketServer\Server;
+
+$server = new Server('localhost', 8000, array('input1' => $stream1)); //attaches $stream1 as input1
+$server->attachInput('anotherinput', $stream2); //attaches $stream2 as anotherinput
+
+$server->on('input.input1', function($in) {echo "input 1\n";}); //is triggered when $stream1 is readable
+$server->on('input.anotherinput', function($in) { echo "another input\n";}); //is triggered when $stream2 is readable
+?>
+```
+
 ### Running
 
 The `run` method will start the event loop. The server will process connections,
