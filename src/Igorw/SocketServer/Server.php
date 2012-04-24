@@ -140,6 +140,17 @@ class Server extends EventEmitter
 
     public function createConnection($socket)
     {
-        return new Connection($socket, $this);
+        $conn = new Connection($socket, $this);
+
+        $conn->setMethod('write', function($data) use ($socket) {
+            return fwrite($socket, $data);
+        });
+
+        $server = $this;
+        $conn->setMethod('close', function() use ($socket, $server) {
+            return $server->close($socket);
+        });
+
+        return $conn;
     }
 }
