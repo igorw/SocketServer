@@ -59,6 +59,19 @@ class ConnectionTest extends TestCase
         $this->assertFalse(is_resource($socket));
     }
 
+    /**
+     * @covers React\Socket\Connection::write
+     */
+    public function testWritingToClosedSocket()
+    {
+        $socket = fopen('php://temp', 'r');
+        $loop   = $this->createLoopMock();
+
+        $conn = new Connection($socket, $loop);
+        $conn->on('error', $this->expectCallableOnce());
+        $conn->write('Attempting to write to a read-only socket');
+    }
+
     private function createLoopMock()
     {
         return $this->getMock('React\EventLoop\LoopInterface');

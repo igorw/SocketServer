@@ -19,7 +19,8 @@ class Connection extends EventEmitter
 
     public function write($data)
     {
-        $len = strlen($data);
+        $len      = strlen($data);
+        $errCount = 0;
 
         do {
             $sent = @fwrite($this->socket, $data);
@@ -27,6 +28,16 @@ class Connection extends EventEmitter
                 $this->emit('error', array('Unable to write to socket', $this));
                 return;
             }
+
+            if (0 === $sent) {
+                if (++$errCount >= 3) {
+                    $this->emit('error', array('Unable to write to socket', $this));
+                    return $this->close();
+                }
+            } else {
+                $errCount = 0;
+            }
+
             $len -= $sent;
             $data = substr($data, $sent);
         } while ($len > 0);
