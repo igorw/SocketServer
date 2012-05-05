@@ -20,65 +20,91 @@ class StreamSelectLoop implements LoopInterface
 
     public function addReadStream($stream, $listener)
     {
-        $this->readStreams[] = $stream;
+        $streamID = (int) $stream;
 
-        if (!isset($this->readListeners[(int) $stream])) {
-            $this->readListeners[(int) $stream] = array();
+        if (!isset($this->readStreams[$streamID])) {
+            $this->readStreams[$streamID] = $stream;
+            $this->readListeners[$streamID] = array();
         }
-        $this->readListeners[(int) $stream][] = $listener;
+
+        $this->readListeners[$streamID][] = $listener;
     }
 
     public function addWriteStream($stream, $listener)
     {
-        $this->writeStreams[] = $stream;
+        $streamID = (int) $stream;
 
-        if (!isset($this->writeListeners[(int) $stream])) {
-            $this->writeListeners[(int) $stream] = array();
+        if (!isset($this->writeStreams[$streamID])) {
+            $this->writeStreams[$streamID] = $stream;
+            $this->writeListeners[$streamID] = array();
         }
-        $this->writeListeners[(int) $stream][] = $listener;
+
+        $this->writeListeners[$streamID][] = $listener;
+    }
+
+    public function removeReadStream($stream)
+    {
+        $streamID = (int) $stream;
+
+        unset($this->readStreams[$streamID]);
+        unset($this->readListeners[$streamID]);
+    }
+
+    public function removeWriteStream($stream)
+    {
+        $streamID = (int) $stream;
+
+        unset($this->writeStreams[$streamID]);
+        unset($this->writeListeners[$streamID]);
     }
 
     public function removeStream($stream)
     {
-        if (false !== ($index = array_search($stream, $this->readStreams))) {
-            unset($this->readStreams[$index]);
-            unset($this->readListeners[(int) $stream]);
-        }
-
-        if (false !== ($index = array_search($stream, $this->writeStreams))) {
-            unset($this->writeStreams[$index]);
-            unset($this->writeListeners[(int) $stream]);
-        }
+        $this->removeReadStream($stream);
+        $this->removeWriteStream($stream);
     }
 
     public function tick()
     {
         $read = $this->readStreams ?: null;
         $write = $this->writeStreams ?: null;
-        @stream_select($read, $write, $except = null, 0, $this->timeout);
-        if ($read) {
-            foreach ($read as $stream) {
-                foreach ($this->readListeners[(int) $stream] as $listener) {
-                    call_user_func($listener, $stream);
+        $excepts = null;
+
+        if (!$read && !$write) {
+            return false;
+        }
+
+        if (($ready = stream_select($read, $write, $except, 0, $this->timeout)) > 0) {
+            if ($read) {
+                foreach ($read as $stream) {
+                    foreach ($this->readListeners[(int) $stream] as $listener) {
+                        if (call_user_func($listener, $stream, $this) === false) {
+                            $this->removeReadStream($stream);
+                            break;
+                        }
+                    }
                 }
             }
-        }
-        if ($write) {
-            foreach ($write as $stream) {
-                foreach ($this->writeListeners[(int) $stream] as $listeners) {
-                    foreach ($listeners as $listener) {
-                        call_user_func($listener, $stream);
+            if ($write) {
+                foreach ($write as $stream) {
+                    foreach ($this->writeListeners[(int) $stream] as $listener) {
+                        if (call_user_func($listener, $stream, $this) === false) {
+                            $this->removeWriteStream($stream);
+                            break;
+                        }
                     }
                 }
             }
         }
+
+        return true;
     }
 
     public function run()
     {
         // @codeCoverageIgnoreStart
-        while (true) {
-            $this->tick();
+        while ($this->tick() === true) {
+            // NOOP
         }
         // @codeCoverageIgnoreEnd
     }
