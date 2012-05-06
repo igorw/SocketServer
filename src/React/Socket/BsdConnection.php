@@ -20,6 +20,10 @@ class BsdConnection extends EventEmitter {
 
         do {
             $sent = socket_write($this->socket, $data, $len);
+            if (false === $sent) {
+                $this->emit('error', array('Unable to write to socket', $this));
+                return;
+            }
             $len -= $sent;
             $data = substr($data, $sent);
         } while ($len > 0);
@@ -29,7 +33,6 @@ class BsdConnection extends EventEmitter {
         $this->emit('end');
         $this->loop->removeStream($this->socket);
 
-        socket_shutdown($this->socket, 2);
         socket_close($this->socket);
     }
 
