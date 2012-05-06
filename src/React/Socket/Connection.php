@@ -31,13 +31,12 @@ class Connection extends EventEmitter implements ConnectionInterface
                 $sent = fwrite($this->socket, $data);
             } catch (\ErrorException $e) {
                 $sent = false;
-                $error = $e->getMessage();
             }
 
             restore_error_handler();
 
             if (false === $sent) {
-                $error = $error ?: 'Unable to write to socket';
+                $error = $e ?: new \RuntimeException('Unable to write to socket');
                 $this->emit('error', array($error, $this));
                 return;
             }
