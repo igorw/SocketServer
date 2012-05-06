@@ -5,7 +5,7 @@ namespace React\Socket;
 use Evenement\EventEmitter;
 use React\EventLoop\LoopInterface;
 
-class Connection extends EventEmitter
+class Connection extends EventEmitter implements ConnectionInterface
 {
     public $bufferSize = 4096;
     public $socket;
@@ -22,9 +22,23 @@ class Connection extends EventEmitter
         $len = strlen($data);
 
         do {
-            $sent = @fwrite($this->socket, $data);
+            set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+                throw new \ErrorException($errstr, 0, $errno, $errfile, $errline);
+                return false;
+            });
+
+            try {
+                $sent = fwrite($this->socket, $data);
+            } catch (\ErrorException $e) {
+                $sent = false;
+                $error = $e->getMessage();
+            }
+
+            restore_error_handler();
+
             if (false === $sent) {
-                $this->emit('error', array('Unable to write to socket', $this));
+                $error = $error ?: 'Unable to write to socket';
+                $this->emit('error', array($error, $this));
                 return;
             }
             $len -= $sent;
@@ -32,10 +46,11 @@ class Connection extends EventEmitter
         } while ($len > 0);
     }
 
-    public function close()
+    public function end()
     {
         $this->emit('end');
         $this->loop->removeStream($this->socket);
+        $this->removeAllListeners();
         fclose($this->socket);
     }
 
@@ -43,7 +58,7 @@ class Connection extends EventEmitter
     {
         $data = @stream_socket_recvfrom($socket, $this->bufferSize);
         if ('' === $data || false === $data) {
-            $this->close();
+            $this->end();
         } else {
             $this->emit('data', array($data));
         }
