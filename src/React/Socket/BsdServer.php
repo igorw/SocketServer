@@ -25,7 +25,12 @@ class BsdServer extends EventEmitter implements ServerInterface
 
         socket_set_nonblock($this->master);
 
-        socket_bind($this->master, $host, $port);
+        if (false === socket_bind($this->master, $host, $port)) {
+            $int = socket_last_error();
+            $msg = socket_strerror($int);
+            
+            throw new ConnectionException($msg, $int);
+        }
         socket_listen($this->master, 0);
 
         $that = $this;
