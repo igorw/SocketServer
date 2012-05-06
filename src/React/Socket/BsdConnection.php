@@ -51,7 +51,7 @@ class BsdConnection extends EventEmitter implements ConnectionInterface
             $data = $buf;
             $this->emit('data', array($data));
         } else {
-            $this->close();
+            $this->end();
         }
     }
 }
