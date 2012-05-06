@@ -22,7 +22,7 @@ class Connection extends EventEmitter implements ConnectionInterface
         $that = $this;
 
         $this->buffer->on('error', function ($error) use ($that) {
-            $that->emit('error', array($error, $that));
+            $that->emit('error', array(new \OverflowException($error), $that));
             $that->close();
         });
     }
