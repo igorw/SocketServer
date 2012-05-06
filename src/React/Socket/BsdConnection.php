@@ -1,21 +1,26 @@
 <?php
+
 namespace React\Socket;
+
 use Evenement\EventEmitter;
 use React\EventLoop\LoopInterface;
 
-class BsdConnection extends EventEmitter {
+class BsdConnection extends EventEmitter implements ConnectionInterface
+{
     public $bufferSize = 4096;
 
-    protected $socket;
+    public $socket;
 
-    protected $loop;
+    private $loop;
 
-    public function __construct($socket, LoopInterface $loop) {
+    public function __construct($socket, LoopInterface $loop)
+    {
         $this->socket = $socket;
         $this->loop   = $loop;
     }
 
-    public function write($data) {
+    public function write($data)
+    {
         $len = strlen($data);
 
         do {
@@ -29,14 +34,16 @@ class BsdConnection extends EventEmitter {
         } while ($len > 0);
     }
 
-    public function close() {
+    public function end()
+    {
         $this->emit('end');
         $this->loop->removeStream($this->socket);
 
         socket_close($this->socket);
     }
 
-    public function handleData($socket) {
+    public function handleData($socket)
+    {
         $data = $buf = '';
 
         $bytes = socket_recv($socket, $buf, $this->bufferSize, MSG_DONTWAIT);

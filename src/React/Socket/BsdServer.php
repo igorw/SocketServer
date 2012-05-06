@@ -8,6 +8,7 @@ use React\EventLoop\LoopInterface;
 class BsdServer extends EventEmitter implements ServerInterface
 {
     private $master;
+
     private $loop;
 
     public function __construct(LoopInterface $loop)
