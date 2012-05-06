@@ -30,12 +30,11 @@ class BsdServer extends EventEmitter implements ServerInterface
         $that = $this;
 
         $this->loop->addReadStream($this->master, function ($master) use ($that) {
-            try {
-                $newSocket = socket_accept($master);
-            } catch (BsdSocketException $e) {
+            if (false === ($newSocket = socket_accept($master))) {
                 $that->emit('error', array('Error accepting new connection'));
                 return;
             }
+
             $that->handleConnection($newSocket);
         });
     }
