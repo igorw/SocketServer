@@ -7,15 +7,17 @@ use React\EventLoop\LoopInterface;
 
 class Buffer extends EventEmitter
 {
+    public $connection;
     public $socket;
     public $closed = false;
     public $listening = false;
     private $loop;
     private $data = '';
 
-    public function __construct($socket, LoopInterface $loop)
+    public function __construct($connection, LoopInterface $loop)
     {
-        $this->socket = $socket;
+        $this->connection = $connection;
+        $this->socket = $connection->socket;
         $this->loop = $loop;
     }
 
@@ -62,15 +64,15 @@ class Buffer extends EventEmitter
         try {
             $sent = fwrite($this->socket, $this->data);
         } catch (\ErrorException $e) {
-            $sent = false;
-            $error = $e->getMessage();
+            $sent  = false;
+            $error = $e;
         }
 
         restore_error_handler();
 
         if (false === $sent) {
-            $error = $error ?: 'Unable to write to socket';
-            $this->emit('error', array($error));
+            $error = $error ?: new \RuntimeError('Unable to write to socket');
+            $this->emit('error', array($error, $this->connection));
             return;
         }
 
