@@ -17,12 +17,12 @@ class Connection extends EventEmitter implements ConnectionInterface
     {
         $this->socket = $socket;
         $this->loop = $loop;
-        $this->buffer = new Buffer($this->socket, $this->loop);
+        $this->buffer = new Buffer($this, $this->loop);
 
         $that = $this;
 
         $this->buffer->on('error', function ($error) use ($that) {
-            $that->emit('error', array($error, $that));
+            $that->emit('error', array(new \OverflowException($error), $that));
             $that->close();
         });
     }
