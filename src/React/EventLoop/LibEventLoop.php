@@ -14,6 +14,9 @@ class LibEventLoop implements LoopInterface
 
     public function __construct()
     {
+        $this->events[EV_READ]  = array();
+        $this->events[EV_WRITE] = array();
+
         $this->base = event_base_new();
         $this->callback = $this->createLibeventCallback();
     }
@@ -62,11 +65,11 @@ class LibEventLoop implements LoopInterface
     {
         $id = (int) $stream;
 
-        if ($existing = isset($this->events[$id])) {
+        if ($existing = isset($this->events[$eventClass][$id])) {
             if (($this->flags[$id] & $eventClass) === $eventClass) {
                 return;
             }
-            $event = $this->events[$id];
+            $event = $this->events[$eventClass][$id];
             event_del($event);
         } else {
             $event = event_new();
@@ -82,7 +85,7 @@ class LibEventLoop implements LoopInterface
 
         event_add($event);
 
-        $this->events[$id] = $event;
+        $this->events[$eventClass][$id] = $event;
         $this->flags[$id] = $flags;
         $this->{"{$eventCallbacks}Callbacks"}[$id] = $listener;
     }
@@ -101,7 +104,7 @@ class LibEventLoop implements LoopInterface
     {
         $id = (int) $stream;
 
-        if (isset($this->events[$id])) {
+        if (isset($this->events[$eventClass][$id])) {
             $flags = $this->flags[$id] & ~$eventClass;
 
             if ($flags === 0) {
@@ -109,7 +112,7 @@ class LibEventLoop implements LoopInterface
                 return $this->removeStream($stream);
             }
 
-            $event = $this->events[$id];
+            $event = $this->events[$eventClass][$id];
 
             event_del($event);
             event_set($event, $stream, $flags | EV_PERSIST, $this->callback, $this);
@@ -124,14 +127,31 @@ class LibEventLoop implements LoopInterface
     {
         $id = (int) $stream;
 
-        if (isset($this->events[$id])) {
-            $event = $this->events[$id];
+        $found = false;
+        if (isset($this->events[EV_READ][$id])) {
+            $event = $this->events[EV_READ][$id];
 
             event_del($event);
             event_free($event);
 
+            unset($this->events[EV_READ][$id]);
+
+            $found = true;
+        }
+
+        if (isset($this->events[EV_WRITE][$id])) {
+            $event = $this->events[EV_WRITE][$id];
+
+            event_del($event);
+            event_free($event);
+
+            unset($this->events[EV_WRITE][$id]);
+
+            $found = true;
+        }
+
+        if ($found) {
             unset(
-                $this->events[$id],
                 $this->flags[$id],
                 $this->readCallbacks[$id],
                 $this->writeCallbacks[$id]
